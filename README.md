@@ -1,1 +1,5 @@
-# positioner_dynamic_limits_calculator
+# Positioner dynamic limits calculator
+
+Интерактивная jupyter тетрадь для вычисления предельных динамических характеристики позиционеров и построения трапецеидального профиля движения.
+
+Для работы потребуется `numpy` и `matplotlib` и `jupyter`.
