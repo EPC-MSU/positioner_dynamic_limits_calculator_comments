@@ -1,0 +1,6 @@
+name: positioner_dynamic_limits_calculator
+dependencies:
+  - python=3.8
+  - numpy
+  - matplotlib
+  - ipywidgets
