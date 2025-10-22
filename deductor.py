@@ -221,6 +221,7 @@ class Validator:
     def __init__(self, func: Callable[[float,...], bool], desc: str, strict: bool = False):
         self._func = func
         self._desc = desc
+        self._strict = strict
 
     def __call__(self, m) -> bool:
         # collect arguments 
@@ -229,7 +230,7 @@ class Validator:
         # check that all arguments are defined
         if np.any(np.isnan(list(args.values()))):
             # model is not fully defined, but this is not error
-            if strict:
+            if self._strict:
                 raise ValueError(f'{type(m).__name__}: {self._desc}: attributes {str.join(", ", args_names)} must be defined.')
         else:
             # validate
@@ -248,23 +249,28 @@ class DeductorBase:
     _DERIVATE_RULES: List[DerivateRule] = []
     _VALIDATORS: List[Validator] = []
     
-    def __init_subclass__(cls):
-        # copy superclass properties
-        cls._ALL_ATTRIBUTES = copy(getattr(cls, '_ALL_ATTRIBUTES', []))
-        cls._ALL_DERIVATE_RULES = copy(getattr(cls, '_ALL_DERIVATE_RULES', []))
-        cls._ALL_VALIDATORS = copy(getattr(cls, '_ALL_VALIDATORS', []))
-        cls._BASE_ATTRIBUTES_NAMES = copy(getattr(cls, '_BASE_ATTRIBUTES_NAMES', []))
-        # populate attributes and derivative rules full list
-        cls._ALL_DERIVATE_RULES.extend(cls._DERIVATE_RULES)
+    def __init_subclass__(cls, **kwargs):
+        super(DeductorBase, cls).__init_subclass__(**kwargs)
+        # create class atrributes
+        cls._ALL_ATTRIBUTES = []
+        cls._ALL_DERIVATE_RULES = []
+        cls._ALL_VALIDATORS = []
+        cls._BASE_ATTRIBUTES_NAMES = []
+        # populate them with superclass attributes and rules
+        for c in reversed(cls.__mro__):
+            if issubclass(c, DeductorBase):
+                cls._ALL_DERIVATE_RULES.extend(c._DERIVATE_RULES)
+                cls._ALL_VALIDATORS.extend(c._VALIDATORS)
+                for attr in c._ATTRIBUTES:
+                    # form list of base attributes
+                    if isinstance(attr, BaseAttribute):
+                        cls._BASE_ATTRIBUTES_NAMES.append(attr.name)
+                    # get derivative rules
+                    cls._ALL_DERIVATE_RULES.extend(attr.derivate_rules)
+                    cls._ALL_ATTRIBUTES.append(attr)
+        # add properties (only for current class because superclass properties are inherited)
         for attr in cls._ATTRIBUTES:
-            # add corresponding attribute
             attr.add_to_class(cls)
-            # form list of base attributes
-            if isinstance(attr, BaseAttribute):
-                cls._BASE_ATTRIBUTES_NAMES.append(attr.name)
-            # get derivative rules
-            cls._ALL_DERIVATE_RULES.extend(attr.derivate_rules)
-            cls._ALL_ATTRIBUTES.append(attr)
 
     def __init__(self, rel_tolerance: float = 0.05, validate = True, **kwargs):
         # get tolerance
