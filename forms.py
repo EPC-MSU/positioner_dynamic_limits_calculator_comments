@@ -1,6 +1,7 @@
 from typing import NamedTuple, Type, Dict, Sequence, List, Callable, Any
 import ipywidgets as widgets
 from IPython.display import  display, HTML
+import numpy as np
 
 def cprint(s, color = 'black', background = 'white'):
     display(HTML(f'<span style="color:{color};background:{background};">{s}</span>'))
@@ -22,8 +23,8 @@ class AttributeForm():
                 self.desc.value = attr.desc or ''
             else:
                 self.value.disabled = True
-                self.units.value = ''
-                self.desc.value = ''
+                self.units.value = 'n/a'
+                self.desc.value = 'Parameter value is unknown.'
 
         def get_value(self) -> Dict[str, float]:
             if self.selector.value is not None:
@@ -62,17 +63,18 @@ class AttributeForm():
                     widgets.Label(value='', layout=grid_widget_layout),
                     widgets.Label(value='', layout=grid_widget_layout),
                 )
-            # set values
-            attr = row.selector.value
-            if attr is not None:
-                row.units.value = attr.units or ''
-                row.desc.value = attr.desc or ''
-            else:
-                row.value.disabled = True
-            if default_model is not None:
-                row.value.value = getattr(default_model, attr.name)
             # configure events
             row.selector.observe(row.on_dropdown, names='value')
+            # default state
+            if default_model is not None:
+                attr = row.selector.value
+                value = getattr(default_model, attr.name)
+                if not np.isnan(value):
+                    row.value.value = value
+                else:
+                    row.selector.value = None
+            # update row state
+            row.on_dropdown(None)
             # add to grid
             #for l, w in enumerate(row):
             #    grid[k,l] = w
